@@ -90,12 +90,20 @@ if ($is_wc_active) {
 	add_action('admin_enqueue_scripts', 'woocontractsadmin_js');
 
 	function woocontracts_kisa_kodlari_donustur($text) {
+       $items = WC()->cart->get_cart();  // Sepetteki ürünleri al
+        $skus = [];
+        foreach($items as $item => $values) { 
+            $product = wc_get_product($values['data']->get_id()); 
+            $skus[] = $product->get_sku(); 
+        }
+        $all_skus = implode(", ", $skus);
+     
 		$vergitutar = WC()->cart->get_total_tax();
 		$kargotutar = WC()->cart->get_cart_shipping_total();
 		$sepettutar = WC()->cart->get_cart_total();
 		$toplamtutar = WC()->cart->get_total();
-		$search = array("[fatura-isim]", "[fatura-firma]", "[fatura-adres]", "[tc-kimlik-no]", "[vergi-dairesi]", "[vergi-numarasi]", "[kargo-isim]", "[kargo-firma]", "[kargo-adres]", "[telefon]", "[eposta]", "[tarih]", "[urun-listesi]", "[toplam-tutar]", "[kargo-tutar]", "[vergi-tutar]", "[sepet-tutar]", "[odeme-yontemi]");
-		$replace = array("<span class=musteriad></span> <span class=musterisoyad></span>", "<span class=\"musterifirma\"></span>", "<span class=\"musteriadres1\"></span> <span class=\"musteriadres2\"></span> <span class=\"musteriposta\"></span> <span class=\"musteriilce\"></span> <span class=\"musteriil\"></span>", "<span class=\"tckimlik\"></span>", "<span class=\"vergidairesi\"></span>", "<span class=\"vergino\"></span>", "<span class=kargoad></span> <span class=kargosoyad></span>", "<span class=\"kargofirma\"></span>", "<span class=\"kargoadres1\"></span> <span class=\"kargoadres2\"></span> <span class=\"kargoposta\"></span> <span class=\"kargoilce\"></span> <span class=\"kargoil\"></span>", "<span class=\"musteritel\"></span>", "<span class=\"musterieposta\"></span>", "<span class=\"wooctarih\"></span>", "<div class=\"urunlistesi\"></div>", $toplamtutar, $kargotutar, $vergitutar, $sepettutar, "<span style=\"font-size:smaller;font-style:italic;\">Sipariş tamamlandığında sözleşmeye eklenecektir.</span>");
+		$search = array("[fatura-isim]","[fatura-soyisim]", "[urun-sku]" ,"[fatura-firma]", "[fatura-adres]", "[tc-kimlik-no]", "[vergi-dairesi]", "[vergi-numarasi]", "[kargo-isim]", "[kargo-firma]", "[kargo-adres]", "[telefon]", "[eposta]", "[tarih]", "[urun-listesi]", "[toplam-tutar]", "[kargo-tutar]", "[vergi-tutar]", "[sepet-tutar]", "[odeme-yontemi]");
+		$replace = array("<span class=musteriad></span>", "<span class=musterisoyad></span>", $all_skus ,"<span class=\"musterifirma\"></span>", "<span class=\"musteriadres1\"></span> <span class=\"musteriadres2\"></span> <span class=\"musteriposta\"></span> <span class=\"musteriilce\"></span> <span class=\"musteriil\"></span>", "<span class=\"tckimlik\"></span>", "<span class=\"vergidairesi\"></span>", "<span class=\"vergino\"></span>", "<span class=kargoad></span> <span class=kargosoyad></span>", "<span class=\"kargofirma\"></span>", "<span class=\"kargoadres1\"></span> <span class=\"kargoadres2\"></span> <span class=\"kargoposta\"></span> <span class=\"kargoilce\"></span> <span class=\"kargoil\"></span>", "<span class=\"musteritel\"></span>", "<span class=\"musterieposta\"></span>", "<span class=\"wooctarih\"></span>", "<div class=\"urunlistesi\"></div>", $toplamtutar, $kargotutar, $vergitutar, $sepettutar, "<span style=\"font-size:smaller;font-style:italic;\">Sipariş tamamlandığında sözleşmeye eklenecektir.</span>");
 		$new_text = str_replace($search, $replace, $text);
 		return $new_text;
 	}
@@ -228,29 +236,6 @@ if ($is_wc_active) {
         <br><b>' . esc_html__('Vergi Numarası', 'sozlesmeler') . ':</b> {{data.billing_vergi_no}}</div>';
 	}
 	add_action('woocommerce_admin_order_preview_start', 'woocontracts_admin_order_data');
-  
-  	function get_active_product_sku() {
-    if ( ! function_exists( 'WC' ) ) {
-        return '';
-    }
-    
-    $cart_items = WC()->cart->get_cart();
-    
-    foreach ($cart_items as $cart_item) {
-        $product = $cart_item['data'];
-        if ($product) {
-            return $product->get_sku();
-        }
-    }
-
-    return '';
-}
-
-function sku_shortcode() {
-    return get_active_product_sku();
-}
-add_shortcode('urun-kodu', 'sku_shortcode');
-
 
 	function woocontracts_checkout_field_display_admin_order_meta($order) {
 		echo '<div class="address"><p><strong>' . esc_html__('TC Kimlik No', 'sozlesmeler') . ':</strong> '; 
@@ -276,7 +261,8 @@ add_shortcode('urun-kodu', 'sku_shortcode');
 
 	function woocontracts_checkout_additional_checkboxes() {
 		$woocontractsbaslik = (!empty(get_option("woocontracts_baslik")) ? get_option("woocontracts_baslik") : "Sözleşmeler");
-		$checkbox1_text = sprintf(__('<a href="#sozlesmeler">%1$s</a> bölümünü okudum, anladım ve kabul ediyorum.', 'sozlesmeler'), $woocontractsbaslik);
+		$checkbox1_text = __('Mesafeli Sözleşmeler Yönetmeliği uyarınca hazırlanan Ön Bilgilendirme Formunu ve Mesafeli Satış Sözleşmesini okuduysanız ve kabul ediyorsanız lütfen soldaki kutucuğu işaretleyiniz.', 'sozlesmeler');
+
 		echo '<p class="form-row custom-checkboxes"><label class="woocommerce-form__label checkbox custom-one"><input type="checkbox" class="woocommerce-form__input woocommerce-form__input-checkbox input-checkbox" name="wctr_checkbox"> <span>' . wp_kses_post($checkbox1_text) . '<span class="required">*</span></span></label></p>';
 	}
 	add_action('woocommerce_checkout_after_terms_and_conditions', 'woocontracts_checkout_additional_checkboxes');
@@ -297,12 +283,24 @@ add_shortcode('urun-kodu', 'sku_shortcode');
 		ob_start();
 		echo '<div id="urunListesi" class="tg-wrap"><table class="tg"><tr><th class="tg-hgcj">Cinsi/Türü</th><th class="tg-hgcj">Miktarı</th><th class="tg-hgcj">Birim Fiyatı</th><th class="tg-hgcj">Toplam Satış Bedeli</th></tr>';
 		foreach ($order->get_items() as $item_id => $item) {
-			$item_name = $item->get_name();
-			$quantity = $item->get_quantity();
-			$totalprice = $item->get_total();
-			$price = $totalprice / $quantity;
-			echo wp_kses_post('<tr><td class="tg-s6z2">' . $item_name . '</td><td class="tg-s6z2">' . $quantity . '</td><td class="tg-s6z2">' . get_woocommerce_currency_symbol() . number_format($price, 2) . '</td><td class="tg-s6z2">' . get_woocommerce_currency_symbol() . number_format($totalprice, 2) . '</td></tr>');
-		}
+    $item_name = $item->get_name();
+    $quantity = $item->get_quantity();
+    $totalprice = $item->get_total();
+    $price = $totalprice / $quantity;
+
+    $product = $item->get_product();
+
+    
+    if ($product) {
+        $sku = $product->get_sku();
+        
+        $sku = $sku ? $sku : "N/A";
+    } else {
+        $sku = "N/A";
+    }
+
+    echo wp_kses_post('<tr><td class="tg-s6z2">' . $item_name . ' (' . $sku . ')</td><td class="tg-s6z2">' . $quantity . '</td><td class="tg-s6z2">' . get_woocommerce_currency_symbol() . number_format($price, 2) . '</td><td class="tg-s6z2">' . get_woocommerce_currency_symbol() . number_format($totalprice, 2) . '</td></tr>');
+}
 		echo '</table></div>';
 		$urunListeVar = ob_get_clean();
 		$woocontracts1a = get_option("woocontracts_1a");
@@ -315,8 +313,9 @@ add_shortcode('urun-kodu', 'sku_shortcode');
 		$woocontracts1 = (!empty(get_option("woocontracts_1_yaz")) ? stripslashes(get_option("woocontracts_1_yaz")) : "Bu alanları Sözleşmeler kısmından düzenleyebilirsiniz.");
 		$woocontracts2 = (!empty(get_option("woocontracts_2_yaz")) ? stripslashes(get_option("woocontracts_2_yaz")) : "Bu alanları Sözleşmeler kısmından düzenleyebilirsiniz.");
 		$woocontracts3 = (!empty(get_option("woocontracts_3_yaz")) ? stripslashes(get_option("woocontracts_3_yaz")) : "Bu alanları Sözleşmeler kısmından düzenleyebilirsiniz.");
-		$search = array("[fatura-isim]", "[fatura-firma]", "[fatura-adres]", "[tc-kimlik-no]", "[vergi-dairesi]", "[vergi-numarasi]", "[kargo-isim]", "[kargo-firma]", "[kargo-adres]", "[telefon]", "[eposta]", "[tarih]", "[urun-listesi]", "[toplam-tutar]", "[kargo-tutar]", "[vergi-tutar]", "[sepet-tutar]", "[odeme-yontemi]", "[urun-kodu]");
-		$fisim = $order->get_formatted_billing_full_name();
+		$search = array("[fatura-isim]", "[fatura-soyisim]", "[urun-sku]" ,"[fatura-firma]", "[fatura-adres]", "[tc-kimlik-no]", "[vergi-dairesi]", "[vergi-numarasi]", "[kargo-isim]", "[kargo-firma]", "[kargo-adres]", "[telefon]", "[eposta]", "[tarih]", "[urun-listesi]", "[toplam-tutar]", "[kargo-tutar]", "[vergi-tutar]", "[sepet-tutar]", "[odeme-yontemi]");
+		$fisim = $order->get_billing_first_name();
+		$fsoyisim = $order->get_billing_last_name();
 		$kargisim = $order->get_formatted_shipping_full_name();
 		$tckimlikno = $order->get_meta('_billing_tc');
 		$vergidairesi = $order->get_meta('_billing_vergi_dairesi');
@@ -331,7 +330,8 @@ add_shortcode('urun-kodu', 'sku_shortcode');
 			$kargil = $fil;
 			$kargadres = $fadres;
 		}
-		$replace = array($fisim, $order->get_billing_company(), $fadres, $tckimlikno, $vergidairesi, $verginumarasi, $kargisim, $order->get_shipping_company(), $kargadres, $order->get_billing_phone(), $order->get_billing_email(), $tarih, $urunListeVar, $order->get_formatted_order_total(), $order->get_shipping_to_display(), $order->get_total_tax(), $order->get_subtotal_to_display(), $order->get_payment_method_title());
+		$replace = array($fisim, $fsoyisim ,$order->get_billing_company(), $fadres, $tckimlikno, $vergidairesi, $verginumarasi, $kargisim, $order->get_shipping_company(), $kargadres, $order->get_billing_phone(), $order->get_billing_email(), $tarih, $urunListeVar, $order->get_formatted_order_total(), $order->get_shipping_to_display(), $order->get_total_tax(), $order->get_subtotal_to_display(), $order->get_payment_method_title(), $sku_string);
+
 		$woocontracts1yaz = wp_kses_post(nl2br(str_replace($search, $replace, $woocontracts1)));
 		$woocontracts2yaz = wp_kses_post(nl2br(str_replace($search, $replace, $woocontracts2)));
 		$woocontracts3yaz = wp_kses_post(nl2br(str_replace($search, $replace, $woocontracts3)));
